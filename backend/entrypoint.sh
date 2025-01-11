@@ -1,8 +1,16 @@
 #!/bin/sh
 set -e
 
-echo "Container's IP address: `awk 'END{print $1}' /etc/hosts`"
+go version
 
 cd /backend
 
-make
+if [ -d "xcontrol-cli" ]; then
+  cd xcontrol-cli
+  git pull
+else
+    git clone https://github.com/522122/xcontrol-cli.git
+    cd xcontrol-cli
+fi
+
+go build -o /backend/out/cli

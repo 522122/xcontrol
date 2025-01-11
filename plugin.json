@@ -1,11 +1,11 @@
 {
-  "name": "Example Plugin",
-  "author": "John Doe",
-  "flags": ["debug", "_root"],
+  "name": "xcontrol",
+  "author": "522122",
+  "flags": ["debug", "root"],
   "api_version": 1,
   "publish": {
-    "tags": ["template", "root"],
-    "description": "Decky example plugin.",
+    "tags": ["Rog Ally X", "power settings", "root", "TDP", "SMT", "disabline cores"],
+    "description": "Simple plugin to fiddle with some power settings",
     "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
   }
 }
