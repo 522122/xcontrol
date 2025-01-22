@@ -7,6 +7,7 @@ import SettingTdp from "./components/SettingTdp";
 import SettingSmt from "./components/SettingSmt";
 import SettingCharge from "./components/SettingCharge";
 import SettingBoost from "./components/SettingBoost";
+import SettingSshd from "./components/SettingSshd";
 
 function Content() {
   // const state = useData((state) => state);
@@ -22,6 +23,7 @@ function Content() {
       <SettingSmt />
       <SettingBoost />
       <SettingCharge />
+      <SettingSshd />
 
     </PanelSection>
   );

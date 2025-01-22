@@ -2,6 +2,7 @@ import os
 import decky
 import asyncio
 import json
+from settings import SettingsManager
 
 class Api:
     CLI_PATH = os.path.join(decky.DECKY_PLUGIN_DIR, "bin", "cli")
@@ -53,22 +54,91 @@ class Api:
                 self.tasks.pop(id)
         
         task.add_done_callback(cleanup)
-    
+
+class Services:
+    CLI_PATH = "/usr/bin/systemctl"
+
+    def __init__(self):
+        self.tasks = {}
+        
+    async def _spawn(self, args):
+        await asyncio.sleep(2)
+        await asyncio.create_subprocess_exec(
+            Services.CLI_PATH, 
+            *args,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        
+    async def read(self, args):
+        process = await asyncio.create_subprocess_exec(
+            Services.CLI_PATH,
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await process.communicate()            
+        return stdout.decode().strip()
+        
+    def run(self, args):
+        id = args[1]
+        if id in self.tasks:
+            self.tasks[id].cancel()
+            self.tasks.pop(id)
+            
+        task = asyncio.create_task(self._spawn(args))
+        self.tasks[id] = task
+        
+        def cleanup(task):
+            if not task.cancelled():
+                self.tasks.pop(id)
+        
+        task.add_done_callback(cleanup)
+
 class Plugin:        
         
     async def write(self, args):
         flag, value = args
-        self.api.run([f"-{flag}", str(value)])
+        if flag == "start" or flag == "stop":
+            self.settings.setSetting(f"service-{value}", flag)
+            self.services.run([flag, value])
+            return
+        else:
+            flag = f"-{flag}"
+            value = str(value)
+            self.settings.setSetting(flag, value)
+            self.api.run([flag, value])
         
     async def read(self):
-        data = await self.api.read(["-json"])
-        return json.loads(data)
+        cli_data = await self.api.read(["-json"])
+        is_sshd_active = await self.services.read(["is-active", "sshd"])
+        json_cli_data = json.loads(cli_data)
+        return {**json_cli_data, **{"sshd": "start" if is_sshd_active == "active" else "stop"}}
+    
+    def write_on_load(self):
+        cli_cmd = []
+        for arg, value in self.settings.settings.items():
+            if arg.startswith("service-"):
+                service_name = arg.split("-")[1]
+                decky.logger.info(f"Initializing services: {service_name} {value}")
+                self.services.run([value, service_name])
+            else:
+                cli_cmd.append(arg)
+                cli_cmd.append(value)
+        if len(cli_cmd) == 0:
+            return
+        decky.logger.info(f"Initializing cli: {cli_cmd}")
+        self.api.run(cli_cmd)
         
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
+        self.settings = SettingsManager("settings", decky.DECKY_PLUGIN_SETTINGS_DIR)
+        # self.settings.read()
         self.api = Api()
-        self.loop = asyncio.get_event_loop()
-        decky.logger.info("Hello World!")
+        self.services = Services()
+        self.write_on_load()
+        # self.loop = asyncio.get_event_loop()
+        decky.logger.info("Initialized")
 
     # Function called first during the unload process, utilize this to handle your plugin being stopped, but not
     # completely removed
