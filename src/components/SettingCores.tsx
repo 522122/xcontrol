@@ -23,7 +23,7 @@ export default function () {
         onChange={handleChange}
         description={isOutOfSync && <IoCodeWorkingSharp />}
         showValue
-        min={1}
+        min={2}
         max={8}
         step={1}
       />
